@@ -1,3 +1,6 @@
-urllib3>=1.8.3
-elasticsearch>=1.8.0,<2.1.0
-click>=3.3
+urllib3>=1.20
+elasticsearch>=5.4.0,<6.0.0
+click>=6.7
+pyyaml>=3.10
+voluptuous>=0.9.3
+certifi>=2017.7.27.1

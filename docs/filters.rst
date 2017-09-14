@@ -3,51 +3,66 @@
 Filter Methods
 ==============
 
-Sections
+* `IndexList`_
+* `SnapshotList`_
 
-* `Regex`_
-* `Date & Time`_
-* `Disk Space`_
+IndexList
+---------
 
-Regex
------
+.. automethod:: curator.indexlist.IndexList.filter_allocated
+   :noindex:
 
-build_filter
-++++++++++++
-.. automethod:: curator.api.build_filter
+.. automethod:: curator.indexlist.IndexList.filter_by_age
+   :noindex:
 
-apply_filter
-+++++++++++++
-.. automethod:: curator.api.apply_filter
+.. automethod:: curator.indexlist.IndexList.filter_by_regex
+   :noindex:
 
-get_date_regex
-++++++++++++++
-.. automethod:: curator.api.get_date_regex
+.. automethod:: curator.indexlist.IndexList.filter_by_space
+   :noindex:
+
+.. automethod:: curator.indexlist.IndexList.filter_closed
+   :noindex:
+
+.. automethod:: curator.indexlist.IndexList.filter_forceMerged
+   :noindex:
+
+.. automethod:: curator.indexlist.IndexList.filter_kibana
+   :noindex:
+
+.. automethod:: curator.indexlist.IndexList.filter_opened
+   :noindex:
+
+.. automethod:: curator.indexlist.IndexList.filter_none
+  :noindex:
+
+.. automethod:: curator.indexlist.IndexList.filter_by_alias
+  :noindex:
+
+.. automethod:: curator.indexlist.IndexList.filter_by_count
+   :noindex:
+
+.. automethod:: curator.indexlist.IndexList.filter_period
+   :noindex:
 
 
-Date & Time
------------
+SnapshotList
+------------
 
-get_datetime
-+++++++++++++
-.. automethod:: curator.api.get_datetime
+.. automethod:: curator.snapshotlist.SnapshotList.filter_by_age
+   :noindex:
 
-get_target_month
-++++++++++++++++
-.. automethod:: curator.api.get_target_month
+.. automethod:: curator.snapshotlist.SnapshotList.filter_by_regex
+   :noindex:
 
-get_cutoff
-++++++++++
-.. automethod:: curator.api.get_cutoff
+.. automethod:: curator.snapshotlist.SnapshotList.filter_by_state
+  :noindex:
 
-timestamp_check
-+++++++++++++++
-.. automethod:: curator.api.timestamp_check
+.. automethod:: curator.snapshotlist.SnapshotList.filter_none
+  :noindex:
 
+.. automethod:: curator.snapshotlist.SnapshotList.filter_by_count
+  :noindex:
 
-Disk Space
-----------
-
-filter_by_space
-+++++++++++++++
-.. automethod:: curator.api.filter_by_space
+.. automethod:: curator.snapshotlist.SnapshotList.filter_period
+  :noindex:

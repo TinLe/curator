@@ -134,14 +134,14 @@ for example `curator.list`
 
 ["source","sh",subs="attributes,callouts"]
 --------------------------------------------------
-deb [arch=amd64] http://packages.elastic.co/curator/{curator_major}/debian stable main
+deb [arch=amd64] https://packages.elastic.co/curator/{curator_major}/debian stable main
 --------------------------------------------------
 
 or
 
 ["source","sh",subs="attributes,callouts"]
 --------------------------------------------------
-deb [arch=amd64] http://packages.elastic.co/curator/{curator_major}/debian9 stable main
+deb [arch=amd64] https://packages.elastic.co/curator/{curator_major}/debian9 stable main
 --------------------------------------------------
 
 After running `sudo apt-get update`, the repository is ready for use.
@@ -220,9 +220,9 @@ RHEL/CentOS 6:
 --------------------------------------------------
 [curator-{curator_major}]
 name=CentOS/RHEL 6 repository for Elasticsearch Curator {curator_major}.x packages
-baseurl=http://packages.elastic.co/curator/{curator_major}/centos/6
+baseurl=https://packages.elastic.co/curator/{curator_major}/centos/6
 gpgcheck=1
-gpgkey=http://packages.elastic.co/GPG-KEY-elasticsearch
+gpgkey=https://packages.elastic.co/GPG-KEY-elasticsearch
 enabled=1
 --------------------------------------------------
 
@@ -231,12 +231,12 @@ RHEL/CentOS 7:
 --------------------------------------------------
 [curator-{curator_major}]
 name=CentOS/RHEL 7 repository for Elasticsearch Curator {curator_major}.x packages
-baseurl=http://packages.elastic.co/curator/{curator_major}/centos/7
+baseurl=https://packages.elastic.co/curator/{curator_major}/centos/7
 gpgcheck=1
-gpgkey=http://packages.elastic.co/GPG-KEY-elasticsearch
+gpgkey=https://packages.elastic.co/GPG-KEY-elasticsearch
 enabled=1
 --------------------------------------------------
-=========================================
+========================================
 
 [[yum-binary]]
 === Binary Package Installation
@@ -277,12 +277,11 @@ Curator from properly functioning.
 
 [[windows-msi]]
 == Windows MSI Installer
-There is now a rudimentary MSI installer available for you to try.  One known
-issue is that in-place upgrades are not possible.  Subsequent installs will be
-side-by-side.  The recommended course of action is to uninstall the old version,
-then install the new one.
+There is now a rudimentary MSI installer available.  In previous releases, you could not run a newer version to install over
+an older version.  The necessary upgrade code was added in version 5.3.0, which means that MSI upgrades will work when installing
+over the top of versions 5.3.0 and up.
 
-The installation will default to `"C:\Program Files (x86)\elasticsearch-curator"`.
+The installation will default to `"C:\Program Files\elasticsearch-curator"`.
 The same binaries and libraries found in the Windows Binary Package will be installed
 into this directory.
 
@@ -304,8 +303,8 @@ That might look like this:
 
 [source,sh]
 --------------------------------------
-wget https://pypi.python.org/packages/source/p/package/package-#.#.#.tar.gz
-tar zxf package-#.#.#.tar.gz
+wget https://github.com/username/project/archive/#.#.#.tar.gz -O package.tar.gz
+tar zxf package.tar.gz
 cd package-#.#.#
 python setup.py install
 --------------------------------------
@@ -342,20 +341,19 @@ wget https://bootstrap.pypa.io/ez_setup.py -O - | python - --user
 
 === Urllib3
 Download and install the https://github.com/shazow/urllib3[urllib3] dependency
-(1.8.3 or greater):
+(1.22):
 
-. `wget https://pypi.python.org/packages/source/u/urllib3/urllib3-1.20.tar.gz`
-. `pip install urllib3-1.20.tar.gz`
+. `wget https://github.com/shazow/urllib3/archive/1.22.tar.gz -O urllib3-1.22.tar.gz`
+. `pip install urllib3-1.22.tar.gz`
 
 or uncompress and run `python setup.py install`
 
 &nbsp;
 
 === click
-Download and install the http://click.pocoo.org/[click] dependency (6.0 or
-greater):
+Download and install the http://click.pocoo.org/[click] dependency (6.7):
 
-. `wget https://pypi.python.org/packages/source/c/click/click-6.7.tar.gz -O click-6.7.tar.gz`
+. `wget https://github.com/pallets/click/archive/6.7.tar.gz -O click-6.7.tar.gz`
 . `pip install click-6.7.tar.gz`
 
 or uncompress and run `python setup.py install`
@@ -366,7 +364,7 @@ or uncompress and run `python setup.py install`
 Download and install the `certifi` dependency.  Always use the most recent
 version:
 
-. `wget https://github.com/certifi/python-certifi/archive/2017.1.23.tar.gz -O certifi.tar.gz`
+. `wget https://github.com/certifi/python-certifi/archive/2018.10.15.tar.gz -O certifi.tar.gz`
 . `pip install certifi.tar.gz`
 
 &nbsp;
@@ -384,10 +382,10 @@ or uncompress and run `python setup.py install`
 
 === voluptuous
 Download and install the https://github.com/alecthomas/voluptuous[voluptuous]
-dependency (0.9.3 or greater):
+dependency (0.11.5):
 
-. `wget https://github.com/alecthomas/voluptuous/archive/0.9.3.tar.gz`
-. `pip install 0.9.3.tar.gz`
+. `wget https://github.com/alecthomas/voluptuous/archive/0.11.5.tar.gz`
+. `pip install 0.11.5.tar.gz`
 
 or uncompress and run `python setup.py install`
 

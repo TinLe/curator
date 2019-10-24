@@ -1,5 +1,5 @@
-from voluptuous import *
-from ..defaults import option_defaults
+from voluptuous import Schema
+from curator.defaults import option_defaults
 
 ## Methods for building the schema
 def action_specific(action):
@@ -17,7 +17,11 @@ def action_specific(action):
             option_defaults.wait_interval(action),
             option_defaults.max_wait(action),
         ],
-        'close' : [ option_defaults.delete_aliases() ],
+        'close' : [
+            option_defaults.delete_aliases(),
+            option_defaults.skip_flush(),
+            option_defaults.ignore_sync_failures(),
+        ],
         'cluster_routing' : [
             option_defaults.routing_type(),
             option_defaults.cluster_routing_setting(),
@@ -28,6 +32,7 @@ def action_specific(action):
         ],
         'create_index' : [
             option_defaults.name(action),
+            option_defaults.ignore_existing(),
             option_defaults.extra_settings(),
         ],
         'delete_indices' : [],
@@ -40,6 +45,7 @@ def action_specific(action):
             option_defaults.delay(),
             option_defaults.max_num_segments(),
         ],
+        'freeze': [],
         'index_settings' : [
             option_defaults.index_settings(),
             option_defaults.ignore_unavailable(),
@@ -115,14 +121,17 @@ def action_specific(action):
             option_defaults.number_of_replicas(),
             option_defaults.shrink_prefix(),
             option_defaults.shrink_suffix(),
+            option_defaults.copy_aliases(),
             option_defaults.delete_after(),
             option_defaults.post_allocation(),
             option_defaults.wait_for_active_shards(action),
             option_defaults.extra_settings(),
             option_defaults.wait_for_completion(action),
+            option_defaults.wait_for_rebalance(),
             option_defaults.wait_interval(action),
             option_defaults.max_wait(action),
         ],
+        'unfreeze': [],
     }
     return options[action]
 
@@ -131,6 +140,7 @@ def get_schema(action):
     # "Required" and "Optional" elements are hashes themselves.
     options = {}
     defaults = [
+        option_defaults.allow_ilm_indices(),
         option_defaults.continue_if_exception(),
         option_defaults.disable_action(),
         option_defaults.ignore_empty_list(),

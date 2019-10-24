@@ -1,3 +1,4 @@
+"""Curator Exceptions"""
 class CuratorException(Exception):
     """
     Base class for all exceptions raised by Curator which are not Elasticsearch
@@ -42,4 +43,24 @@ class SnapshotInProgress(ActionError):
 class ActionTimeout(CuratorException):
     """
     Exception raised when an action fails to complete in the allotted time
+    """
+
+class FailedSnapshot(CuratorException):
+    """
+    Exception raised when a snapshot does not complete with state SUCCESS
+    """
+
+class FailedRestore(CuratorException):
+    """
+    Exception raised when a Snapshot Restore does not restore all selected indices
+    """
+
+class FailedReindex(CuratorException):
+    """
+    Exception raised when failures are found in the reindex task response
+    """
+
+class ClientException(CuratorException):
+    """
+    Exception raised when the Elasticsearch client and/or connection is the source of the problem.
     """

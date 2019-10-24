@@ -108,6 +108,22 @@ class TestSnapshotListRegexFilters(TestCase):
         )
         sl.filter_by_regex(kind='prefix', value='sna', exclude=True)
         self.assertEqual([], sl.snapshots)
+    def test_filter_by_regex_middle(self):
+        client = Mock()
+        client.snapshot.get.return_value = testvars.snapshots
+        client.snapshot.get_repository.return_value = testvars.test_repo
+        sl = curator.SnapshotList(client, repository=testvars.repo_name)
+        self.assertEqual(
+            [u'snap_name', u'snapshot-2015.03.01'],
+            sorted(sl.snapshots)
+        )
+        sl.filter_by_regex(kind='regex', value='shot')
+        self.assertEqual(
+            [u'snapshot-2015.03.01'],
+            sorted(sl.snapshots)
+        )
+        sl.filter_by_regex(kind='regex', value='shot', exclude=True)
+        self.assertEqual([], sl.snapshots)
     def test_filter_by_regex_prefix_exclude(self):
         client = Mock()
         client.snapshot.get.return_value = testvars.snapshots
@@ -429,8 +445,9 @@ class TestSnapshotListPeriodFilter(TestCase):
         client.snapshot.get.return_value = testvars.snapshots
         client.snapshot.get_repository.return_value = testvars.test_repo
         sl = curator.SnapshotList(client, repository=testvars.repo_name)
-        sl.filter_period(source='name', range_from=range_from, epoch=epoch,
-            range_to=range_to, timestring='%Y.%m.%d', unit=unit, 
+        sl.filter_period(
+            source='name', range_from=range_from, epoch=epoch,
+            range_to=range_to, timestring='%Y.%m.%d', unit=unit,
         )
         self.assertEqual(expected, sl.snapshots)
     def test_no_creation_date(self):
@@ -449,3 +466,48 @@ class TestSnapshotListPeriodFilter(TestCase):
             epoch=epoch, range_to=range_to, unit=unit, 
         )
         self.assertEqual(expected, sl.snapshots)
+    def test_invalid_period_type(self):
+        unit = 'days'
+        range_from = -1
+        range_to = -2
+        timestring = '%Y.%m.%d'
+        epoch = 1456963201
+        expected = ValueError
+        client = Mock()
+        client.snapshot.get.return_value = testvars.snapshots
+        client.snapshot.get_repository.return_value = testvars.test_repo
+        sl = curator.SnapshotList(client, repository=testvars.repo_name)
+        self.assertRaises(expected, sl.filter_period, unit=unit, period_type='invalid',
+            range_from=range_from, range_to=range_to, source='name', 
+            timestring=timestring, epoch=epoch
+        )
+    def test_invalid_range_from(self):
+        unit = 'days'
+        range_from = -1
+        range_to = 'invalid'
+        timestring = '%Y.%m.%d'
+        epoch = 1456963201
+        expected = curator.ConfigurationError
+        client = Mock()
+        client.snapshot.get.return_value = testvars.snapshots
+        client.snapshot.get_repository.return_value = testvars.test_repo
+        sl = curator.SnapshotList(client, repository=testvars.repo_name)
+        self.assertRaises(expected, sl.filter_period, unit=unit, period_type='relative',
+            range_from=range_from, range_to=range_to, source='name', 
+            timestring=timestring, epoch=epoch
+        )
+    def test_missing_absolute_date_values(self):
+        unit = 'days'
+        range_from = -1
+        range_to = 'invalid'
+        timestring = '%Y.%m.%d'
+        epoch = 1456963201
+        expected = curator.ConfigurationError
+        client = Mock()
+        client.snapshot.get.return_value = testvars.snapshots
+        client.snapshot.get_repository.return_value = testvars.test_repo
+        sl = curator.SnapshotList(client, repository=testvars.repo_name)
+        self.assertRaises(expected, sl.filter_period, unit=unit, period_type='absolute',
+            range_from=range_from, range_to=range_to, source='name', 
+            timestring=timestring, epoch=epoch
+        )

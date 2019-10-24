@@ -7,10 +7,12 @@
 Options are settings used by <<actions,actions>>.
 
 * <<option_allocation_type,allocation_type>>
+* <<option_allow_ilm,allow_ilm_indices>>
 * <<option_continue,continue_if_exception>>
 * <<option_count,count>>
 * <<option_delay,delay>>
 * <<option_delete_aliases,delete_aliases>>
+* <<option_skip_flush,skip_flush>>
 * <<option_disable,disable_action>>
 * <<option_extra_settings,extra_settings>>
 * <<option_ignore_empty,ignore_empty_list>>
@@ -21,11 +23,16 @@ Options are settings used by <<actions,actions>>.
 * <<option_key,key>>
 * <<option_max_age,max_age>>
 * <<option_max_docs,max_docs>>
+* <<option_max_size,max_size>>
 * <<option_mns,max_num_segments>>
 * <<option_max_wait,max_wait>>
 * <<option_migration_prefix,migration_prefix>>
 * <<option_migration_suffix,migration_suffix>>
 * <<option_name,name>>
+* <<option_new_index,new_index>>
+* <<option_node_filters,node_filters>>
+* <<option_number_of_replicas,number_of_replicas>>
+* <<option_number_of_shards,number_of_shards>>
 * <<option_partial,partial>>
 * <<option_refresh,refresh>>
 * <<option_remote_aws_key,remote_aws_key>>
@@ -54,6 +61,7 @@ Options are settings used by <<actions,actions>>.
 * <<option_value,value>>
 * <<option_wait_for_active_shards,wait_for_active_shards>>
 * <<option_wfc,wait_for_completion>>
+* <<option_wait_for_rebalance,wait_for_rebalance>>
 * <<option_wait_interval,wait_interval>>
 * <<option_warn_if_no_indices,warn_if_no_indices>>
 
@@ -82,6 +90,29 @@ The value of this setting must be one of `require`, `include`, or `exclude`.
 Read more about these settings at {ref}/shard-allocation-filtering.html
 
 The default value for this setting is `require`.
+
+[[option_allow_ilm]]
+== allow_ilm_indices
+
+This option allows Curator to manage ILM-enabled indices. Exercise caution that
+ILM policies and Curator actions will not interfere with each other.
+
+IMPORTANT: Read more about Curator and Index Lifecycle Management
+  <<ilm,here>>.
+
+[source,yaml]
+-------------
+action: delete_indices
+description: "Delete the specified indices"
+options:
+  allow_ilm_indices: true
+filters:
+- filtertype: ...
+-------------
+
+The value of this setting must be either `true` or `false`.
+
+The default value for this setting is `false`.
 
 [[option_continue]]
 == continue_if_exception
@@ -122,6 +153,29 @@ to the next action, if any, even if an exception is encountered. Curator will
 log but ignore the exception that was raised.
 
 The default value for this setting is `False`
+
+
+[[option_copy_aliases]]
+== copy_aliases
+
+NOTE: This setting is only used by the <<shrink,shrink>> action.
+
+[source,yaml]
+-------------
+action: shrink
+description: >-
+  Shrink selected indices on the node with the most available space.
+  Reimplement source index aliases on target index after successful shrink.
+options:
+  shrink_node: DETERMINISTIC
+  copy_aliases: True
+filters:
+  - filtertype: ...
+-------------
+
+The default value of this setting is `False`.  If `True`, after an index has been successfully
+shrunk, any aliases associated with the source index will be copied to the target index.
+
 
 [[option_count]]
 == count
@@ -210,6 +264,27 @@ filters:
 
 The value for this setting determines whether aliases will be deleted from
 indices before closing.
+
+The default value is `False`.
+
+[[option_skip_flush]]
+== skip_flush
+
+NOTE: This setting is only used by the <<close,close action>>, and is
+    optional.
+
+[source,yaml]
+-------------
+action: close
+description: "Close selected indices"
+options:
+  skip_flush: False
+filters:
+- filtertype: ...
+-------------
+
+If `skip_flush` is set to `True`, Curator will not flush indices to disk
+before closing. This may be useful for closing red indices before restoring.
 
 The default value is `False`.
 
@@ -320,7 +395,7 @@ actions:
 -------------
 action: rollover
 description: >-
-  Rollover the index associated with index 'name', which should be in the
+  Rollover the index associated with alias 'name', which should be in the
   form of prefix-000001 (or similar), or prefix-YYYY.MM.DD-1.
 options:
   name: aliasname
@@ -382,6 +457,28 @@ INFO level log message indicating such.  If ignore_empty_list is set to `False`,
 an ERROR level message will be logged, and Curator will exit with code 1.
 
 The default value of this setting is `False`
+
+[[option_ignore_sync_failures]]
+== ignore_sync_failures
+
+NOTE: This setting is only used by the <<close,close action>>, and is
+    optional.
+
+[source,yaml]
+-------------
+action: close
+description: "Close selected indices"
+options:
+  ignore_sync_failures: false
+filters:
+- filtertype: ...
+-------------
+
+If `ignore_sync_failures` is set to `true`, Curator will ignore failures during
+the synced flush that normally takes place before closing. This may be useful
+for closing a list of indices which may include active indices.
+
+The default value is `false`.
 
 [[option_ignore]]
 == ignore_unavailable
@@ -656,7 +753,7 @@ will be raised, and execution will halt.
 -------------
 action: rollover
 description: >-
-  Rollover the index associated with index 'name', which should be in the
+  Rollover the index associated with alias 'aliasname', which should be in the
   form of prefix-000001 (or similar), or prefix-YYYY.MM.DD-1.
 options:
   name: aliasname
@@ -664,12 +761,13 @@ options:
     max_age: 1d
 -------------
 
-NOTE: Either <<option_max_age,max_age>> or <<option_max_docs,max_docs>>, or both
-are required as `conditions:` for the <<rollover,Rollover>> action.
+NOTE: At least one of <<option_max_age,max_age>>, <<option_max_docs,max_docs>>,
+<<option_max_size,max_size>> or any combinations of the three are required as
+`conditions:` for the <<rollover,Rollover>> action.
 
-The maximum age that is allowed before triggering a rollover. _Must be nested
-under `conditions:`_ There is no default value. If this condition is specified,
-it must have a value, or Curator will generate an error.
+The maximum age that is allowed before triggering a rollover. It _must_ be
+nested under `conditions:` There is no default value.  If this condition is
+specified, it must have a value, or Curator will generate an error.
 
 Ages such as `1d` for one day, or `30s` for 30 seconds can be used.
 
@@ -680,7 +778,7 @@ Ages such as `1d` for one day, or `30s` for 30 seconds can be used.
 -------------
 action: rollover
 description: >-
-  Rollover the index associated with index 'name', which should be in the
+  Rollover the index associated with alias 'aliasname', which should be in the
   form of prefix-000001 (or similar), or prefix-YYYY.MM.DD-1.
 options:
   name: aliasname
@@ -688,13 +786,39 @@ options:
     max_docs: 1000000
 -------------
 
-NOTE: Either <<option_max_age,max_age>> or <<option_max_docs,max_docs>>, or both
-are required as `conditions:` for the <<rollover,Rollover>> action.
+NOTE: At least one of <<option_max_age,max_age>>, <<option_max_docs,max_docs>>,
+<<option_max_size,max_size>> or any combinations of the three are required as
+`conditions:` for the <<rollover,Rollover>> action.
 
 The maximum number of documents allowed in an index before triggering a
-rollover.  _Must be nested under `conditions:`_ There is no default value.  If
-this condition is specified, it must have a value, or Curator will generate an
-error.
+rollover.  It _must_ be nested under `conditions:` There is no default value.
+If this condition is specified, it must have a value, or Curator will generate
+an error.
+
+[[option_max_size]]
+== max_size
+
+[source,yaml]
+-------------
+action: rollover
+description: >-
+  Rollover the index associated with alias 'aliasname', which should be in the
+  form of prefix-000001 (or similar), or prefix-YYYY.MM.DD-1.
+options:
+  name: aliasname
+  conditions:
+    max_size: 5gb
+-------------
+
+NOTE: At least one of <<option_max_age,max_age>>, <<option_max_docs,max_docs>>,
+<<option_max_size,max_size>> or any combinations of the three are required as
+`conditions:` for the <<rollover,Rollover>> action.
+
+The maximum approximate size an index is allowed to be before triggering a
+rollover.  Sizes must use Elasticsearch approved
+{ref}/common-options.html#byte-units[byte units]. It _must_ be nested under
+`conditions:` There is no default value.  If this condition is specified, it
+must have a value, or Curator will generate an error.
 
 
 [[option_mns]]
@@ -932,7 +1056,12 @@ NOTE: This setting is used by the <<alias,alias>>, <<create_index,create_index>>
 The value of this setting is the name of the alias, snapshot, or index,
 depending on which action makes use of `name`.
 
-This setting may contain a valid Python strftime string.  Curator will
+=== date math
+include::inc_datemath.asciidoc[]
+
+=== strftime
+
+This setting may alternately contain a valid Python strftime string.  Curator will
 extract the strftime identifiers and replace them with the corresponding values.
 
 The identifiers that Curator currently recognizes include:
@@ -1021,6 +1150,33 @@ filters:
 For the <<snapshot,snapshot>> action, the default value of this setting is
 `curator-%Y%m%d%H%M%S`
 
+[[option_new_index]]
+== new_index
+
+NOTE: This optional setting is only used by the <<rollover,rollover>> action.
+
+[source,yaml]
+-------------
+description: >-
+  Rollover the index associated with alias 'name'.  Specify new index name using
+  date math.
+options:
+  name: aliasname
+  new_index: "<prefix-{now/d}-1>" 
+  conditions:
+    max_age: 1d
+  wait_for_active_shards: 1
+-------------
+
+IMPORTANT: A new index name for rollover should still end with a dash followed by an 
+  incrementable number, e.g. `my_new_index-1`, or if using date math, `<prefix-{now/d}-1>`
+  or `<prefix-{now/d}-000001>`
+
+=== date_math
+
+include::inc_datemath.asciidoc[]
+
+There is no default value for `new_index`.
 
 [[option_node_filters]]
 == node_filters
@@ -1050,11 +1206,15 @@ The current sub-options are as follows:
 
 === permit_masters
 
+This option indicates whether the shrink action can select master eligible nodes when using
+`DETERMINISTIC` as the value for <<option_shrink_node,shrink_node>>. The default value is
+`False`. Please note that this will exclude the elected master, as well as other
+master-eligible nodes.
+
 [IMPORTANT]
 =====================================
-The `permit_masters` sub-option has a default value of `False`.  If you have a small cluster
-with only master/data nodes, you must set `permit_masters` to `True` in order to select one
-of those nodes as a potential <<option_shrink_node,shrink_node>>.
+If you have a small cluster with only master/data nodes, you must set `permit_masters` to
+`True` in order to select one of those nodes as a potential <<option_shrink_node,shrink_node>>.
 =====================================
 
 === exclude_nodes
@@ -1116,7 +1276,6 @@ The value for `number_of_shards` must meet the following criteria:
 * It must be lower than the number of primary shards in the source index.
 * It must be a factor of the number of primary shards in the source index.
 ===========================
-
 
 [[option_partial]]
 == partial
@@ -1239,9 +1398,6 @@ The default value is `True`.
 NOTE: This option is only used by the <<reindex,Reindex action>> when performing
 a remote reindex operation.
 
-WARNING: This feature allows connection to AWS using IAM credentials, but
-    <<faq_aws_iam,Curator 5 does not currently work with AWS>>.
-
 WARNING: This setting will not work unless the `requests-aws4auth` Python module
     has been manually installed first.
 
@@ -1282,9 +1438,6 @@ IMPORTANT: You must set your <<hosts,hosts>> to the proper hostname _with_ port.
 NOTE: This option is only used by the <<reindex,Reindex action>> when performing
 a remote reindex operation.
 
-WARNING: This feature allows connection to AWS using IAM credentials, but
-    <<faq_aws_iam,Curator 5 does not currently work with AWS>>.
-
 WARNING: This setting will not work unless the `requests-aws4auth` Python module
     has been manually installed first.
 
@@ -1324,9 +1477,6 @@ IMPORTANT: You must set your <<hosts,hosts>> to the proper hostname _with_ port.
 
 NOTE: This option is only used by the <<reindex,Reindex action>> when performing
 a remote reindex operation.
-
-WARNING: This feature allows connection to AWS using IAM credentials, but
-    <<faq_aws_iam,Curator 5 does not currently work with AWS>>.
 
 WARNING: This setting will not work unless the `requests-aws4auth` Python module
     has been manually installed first.
@@ -1653,7 +1803,7 @@ and put it after `restored_index`.  For example, if I was restoring
 `index-2017.03.01`, the resulting index would be renamed to
 `restored_index-2017.03.01`.
 
-Read more about this setting at {ref}/modules-snapshots.html#_restore
+Read more about this setting at {ref}/modules-snapshots.html#restore-snapshot
 
 There is no default value.
 
@@ -1705,7 +1855,7 @@ and put it after `restored_index`.  For example, if I was restoring
 `index-2017.03.01`, the resulting index would be renamed to
 `restored_index-2017.03.01`.
 
-Read more about this setting at {ref}/modules-snapshots.html#_restore
+Read more about this setting at {ref}/modules-snapshots.html#restore-snapshot
 
 There is no default value.
 
@@ -2021,8 +2171,8 @@ to treat this reindex differently.
 [IMPORTANT]
 =============================
 **If it is a _local_ reindex,** you _must_ set either
-<<option_migration_prefix,option_migration_prefix>>, or
-<<option_migration_suffix,option_migration_suffix>>, or both.  This prevents
+<<option_migration_prefix,migration_prefix>>, or
+<<option_migration_suffix,migration_suffix>>, or both.  This prevents
 collisions and other bad things from happening.  By assigning a prefix or a
 suffix (or both), you can reindex any local indices to new versions of
 themselves, but named differently.
@@ -2313,7 +2463,7 @@ were `-shrink`, the resulting target index name would be `foo-index-shrink`.
 NOTE: This setting is only used by the <<reindex,reindex>> action.
 
 This setting can speed up reindexing operations by using
-{ref}/search-request-scroll.html#sliced-scroll[Sliced Scroll] to slice on the
+{ref}/search-request-body.html#sliced-scroll[Sliced Scroll] to slice on the
 \_uid.
 
 [source,yaml]
@@ -2464,18 +2614,16 @@ filters:
 - filtertype: ...
 -------------
 
-Actions <<snapshot,snapshot>>, <<restore,restore>>, and
-    <<forcemerge,forcemerge>> will override this value to `21600` if
-    `timeout_override` is unset.  The <<close,close>> action will override the
-    value to 180 if unset.
+If `timeout_override` is unset in your configuration, some actions will
+try to set a sane default value.
 
-Some actions have a default value for `timeout_override`. The following table
-shows these default values:
+The following table shows these default values:
 
 [cols="m,", options="header"]
 |===
 |Action Name |Default `timeout_override` Value
 |close |180
+|delete_snapshots |300
 |forcemerge |21600
 |restore |21600
 |snapshot |21600
@@ -2626,7 +2774,7 @@ actions:
 -------------
 action: rollover
 description: >-
-  Rollover the index associated with index 'name', which should be in the
+  Rollover the index associated with alias 'name', which should be in the
   form of prefix-000001 (or similar), or prefix-YYYY.MM.DD-1.
 options:
   name: aliasname
@@ -2796,6 +2944,53 @@ TIP: During snapshot initialization, information about all previous snapshots is
     several seconds (or even minutes) for this command to return even if the
     `wait_for_completion` setting is set to `False`.
 
+
+[[option_wait_for_rebalance]]
+== wait_for_rebalance
+
+[source,yaml]
+-------------
+action: shrink
+description: >-
+  Shrink selected indices on the node with the most available space.
+  Delete source index after successful shrink, then reroute the shrunk
+  index with the provided parameters.
+options:
+  ignore_empty_list: True
+  shrink_node: DETERMINISTIC
+  node_filters:
+    permit_masters: False
+    exclude_nodes: ['not_this_node']
+  number_of_shards: 1
+  number_of_replicas: 1
+  shrink_prefix:
+  shrink_suffix: '-shrink'
+  delete_after: True
+  post_allocation:
+    allocation_type: include
+    key: node_tag
+    value: cold
+  wait_for_active_shards: 1
+  extra_settings:
+    settings:
+      index.codec: best_compression
+  wait_for_completion: True
+  wait_for_rebalance: True
+  wait_interval: 9
+  max_wait: -1
+filters:
+  - filtertype: ...
+-------------
+
+NOTE: This setting is used by the <<shrink,shrink>> action.
+
+This setting must be `true` or `false`.
+
+Setting this to `false` will result in the <<shrink,shrink>> action only
+checking that the index being shrunk has finished being relocated, and
+not continue to wait for the cluster to fully rebalance all shards.
+
+The default value for this setting is `false`.
 
 
 [[option_wait_interval]]

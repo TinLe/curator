@@ -1,35 +1,39 @@
-import os, sys
-import yaml
+"""Main CLI for Curator"""
+import os
+import sys
 import logging
+import yaml
 import click
 from voluptuous import Schema
-from .defaults import settings
-from .validators import SchemaCheck
-from .config_utils import process_config
-from .exceptions import *
-from .utils import *
-from .indexlist import IndexList
-from .snapshotlist import SnapshotList
-from .actions import *
-from ._version import __version__
+from curator import actions
+from curator.config_utils import process_config, password_filter
+from curator.defaults import settings
+from curator.exceptions import ClientException, ConfigurationError, NoIndices, NoSnapshots
+from curator.indexlist import IndexList
+from curator.snapshotlist import SnapshotList
+from curator.utils import get_client, get_yaml, prune_nones, validate_actions, get_write_index
+from curator.validators import SchemaCheck
+from curator._version import __version__
 
 CLASS_MAP = {
-    'alias' :  Alias,
-    'allocation' : Allocation,
-    'close' : Close,
-    'cluster_routing' : ClusterRouting,
-    'create_index' : CreateIndex,
-    'delete_indices' : DeleteIndices,
-    'delete_snapshots' : DeleteSnapshots,
-    'forcemerge' : ForceMerge,
-    'index_settings' : IndexSettings,
-    'open' : Open,
-    'reindex' : Reindex,
-    'replicas' : Replicas,
-    'restore' : Restore,
-    'rollover' : Rollover,
-    'snapshot' : Snapshot,
-    'shrink' : Shrink,
+    'alias' : actions.Alias,
+    'allocation' : actions.Allocation,
+    'close' : actions.Close,
+    'cluster_routing' : actions.ClusterRouting,
+    'create_index' : actions.CreateIndex,
+    'delete_indices' : actions.DeleteIndices,
+    'delete_snapshots' : actions.DeleteSnapshots,
+    'forcemerge' : actions.ForceMerge,
+    'freeze': actions.Freeze,
+    'index_settings' : actions.IndexSettings,
+    'open' : actions.Open,
+    'reindex' : actions.Reindex,
+    'replicas' : actions.Replicas,
+    'restore' : actions.Restore,
+    'rollover' : actions.Rollover,
+    'snapshot' : actions.Snapshot,
+    'shrink' : actions.Shrink,
+    'unfreeze' : actions.Unfreeze,
 }
 
 def process_action(client, config, **kwargs):
@@ -56,7 +60,7 @@ def process_action(client, config, **kwargs):
     if action == 'delete_indices':
         mykwargs['master_timeout'] = (
             kwargs['master_timeout'] if 'master_timeout' in kwargs else 30)
- 
+
     ### Update the defaults with whatever came with opts, minus any Nones
     mykwargs.update(prune_nones(opts))
     logger.debug('Action kwargs: {0}'.format(mykwargs))
@@ -66,19 +70,19 @@ def process_action(client, config, **kwargs):
         # Special behavior for this action, as it has 2 index lists
         logger.debug('Running "{0}" action'.format(action.upper()))
         action_obj = action_class(**mykwargs)
-        if 'add' in config:
-            logger.debug('Adding indices to alias "{0}"'.format(opts['name']))
-            adds = IndexList(client)
-            adds.iterate_filters(config['add'])
-            action_obj.add(adds, warn_if_no_indices=opts['warn_if_no_indices'])
+        removes = IndexList(client)
+        adds = IndexList(client)
         if 'remove' in config:
             logger.debug(
                 'Removing indices from alias "{0}"'.format(opts['name']))
-            removes = IndexList(client)
             removes.iterate_filters(config['remove'])
             action_obj.remove(
-                removes, warn_if_no_indices= opts['warn_if_no_indices'])
-    elif action in [ 'cluster_routing', 'create_index', 'rollover']:
+                removes, warn_if_no_indices=opts['warn_if_no_indices'])
+        if 'add' in config:
+            logger.debug('Adding indices to alias "{0}"'.format(opts['name']))
+            adds.iterate_filters(config['add'])
+            action_obj.add(adds, warn_if_no_indices=opts['warn_if_no_indices'])
+    elif action in ['cluster_routing', 'create_index', 'rollover']:
         action_obj = action_class(client, **mykwargs)
     elif action == 'delete_snapshots' or action == 'restore':
         logger.debug('Running "{0}"'.format(action))
@@ -93,7 +97,7 @@ def process_action(client, config, **kwargs):
         ilo.iterate_filters(config)
         action_obj = action_class(ilo, **mykwargs)
     ### Do the action
-    if 'dry_run' in kwargs and kwargs['dry_run'] == True:
+    if 'dry_run' in kwargs and kwargs['dry_run']:
         action_obj.do_dry_run()
     else:
         logger.debug('Doing the action here.')
@@ -115,10 +119,10 @@ def run(config, action_file, dry_run=False):
     #########################################
     logger.debug('action_file: {0}'.format(action_file))
     action_config = get_yaml(action_file)
-    logger.debug('action_config: {0}'.format(action_config))
+    logger.debug('action_config: {0}'.format(password_filter(action_config)))
     action_dict = validate_actions(action_config)
     actions = action_dict['actions']
-    logger.debug('Full list of actions: {0}'.format(actions))
+    logger.debug('Full list of actions: {0}'.format(password_filter(actions)))
     action_keys = sorted(list(actions.keys()))
     for idx in action_keys:
         action = actions[idx]['action']
@@ -132,6 +136,8 @@ def run(config, action_file, dry_run=False):
         logger.debug('timeout_override = {0}'.format(timeout_override))
         ignore_empty_list = actions[idx]['options'].pop('ignore_empty_list')
         logger.debug('ignore_empty_list = {0}'.format(ignore_empty_list))
+        allow_ilm = actions[idx]['options'].pop('allow_ilm_indices')
+        logger.debug('allow_ilm_indices = {0}'.format(allow_ilm))
 
         ### Skip to next action if 'disabled'
         if action_disabled:
@@ -155,33 +161,58 @@ def run(config, action_file, dry_run=False):
         kwargs['dry_run'] = dry_run
 
         # Create a client object for each action...
-        client = get_client(**client_args)
-        logger.debug('client is {0}'.format(type(client)))
+        logger.info('Creating client object and testing connection')
+        try:
+            client = get_client(**client_args)
+        except (ClientException, ConfigurationError):
+            sys.exit(1)
+        ### Filter ILM indices unless expressly permitted
+        if allow_ilm:
+            logger.warning('allow_ilm_indices: true')
+            logger.warning('Permitting operation on indices with an ILM policy')
+        if not allow_ilm and action not in settings.snapshot_actions():
+            if actions[idx]['action'] == 'rollover':
+                alias = actions[idx]['options']['name']
+                write_index = get_write_index(client, alias)
+                try:
+                    idx_settings = client.indices.get_settings(index=write_index)
+                    if 'name' in idx_settings[write_index]['settings']['index']['lifecycle']:
+                        logger.info('Alias {0} is associated with ILM policy.'.format(alias))
+                        logger.info(
+                            'Skipping action {0} because allow_ilm_indices is false.'.format(idx))
+                        continue
+                except KeyError:
+                    logger.debug('No ILM policies associated with {0}'.format(alias))
+            elif 'filters' in actions[idx]:
+                actions[idx]['filters'].append({'filtertype': 'ilm'})
+            else:
+                actions[idx]['filters'] = [{'filtertype': 'ilm'}]
         ##########################
         ### Process the action ###
         ##########################
         try:
-            logger.info('Trying Action ID: {0}, "{1}": '
+            logger.info(
+                'Trying Action ID: {0}, "{1}": '
                 '{2}'.format(idx, action, actions[idx]['description'])
             )
             process_action(client, actions[idx], **kwargs)
-        except Exception as e:
-            if isinstance(e, NoIndices) or isinstance(e, NoSnapshots):
+        except Exception as err:
+            if isinstance(err, NoIndices) or isinstance(err, NoSnapshots):
                 if ignore_empty_list:
                     logger.info(
                         'Skipping action "{0}" due to empty list: '
-                        '{1}'.format(action, type(e))
+                        '{1}'.format(action, type(err))
                     )
                 else:
                     logger.error(
                         'Unable to complete action "{0}".  No actionable items '
-                        'in list: {1}'.format(action, type(e))
+                        'in list: {1}'.format(action, type(err))
                     )
                     sys.exit(1)
             else:
                 logger.error(
                     'Failed to complete action: {0}.  {1}: '
-                    '{2}'.format(action, type(e), e)
+                    '{2}'.format(action, type(err), err)
                 )
                 if continue_if_exception:
                     logger.info(
@@ -195,7 +226,8 @@ def run(config, action_file, dry_run=False):
     logger.info('Job completed.')
 
 @click.command()
-@click.option('--config',
+@click.option(
+    '--config',
     help="Path to configuration file. Default: ~/.curator/curator.yml",
     type=click.Path(exists=True), default=settings.config_file()
 )

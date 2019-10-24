@@ -67,6 +67,32 @@ class TestActionReindex(TestCase):
         client.indices.get_settings.return_value = {'other_index':{}}
         ro = curator.Reindex(ilo, testvars.reindex_basic)
         self.assertIsNone(ro.do_action())
+    def test_reindex_with_wait_zero_total(self):
+        client = Mock()
+        client.info.return_value = {'version': {'number': '5.0.0'} }
+        client.indices.get_settings.return_value = testvars.settings_four
+        client.cluster.state.return_value = testvars.clu_state_four
+        client.indices.stats.return_value = testvars.stats_four
+        client.reindex.return_value = testvars.generic_task
+        client.tasks.get.return_value = testvars.completed_task_zero_total
+        ilo = curator.IndexList(client)
+        # After building ilo, we need a different return value
+        client.indices.get_settings.return_value = {'other_index':{}}
+        ro = curator.Reindex(ilo, testvars.reindex_basic)
+        self.assertIsNone(ro.do_action())
+    def test_reindex_with_wait_zero_total_fail(self):
+        client = Mock()
+        client.info.return_value = {'version': {'number': '5.0.0'} }
+        client.indices.get_settings.return_value = testvars.settings_four
+        client.cluster.state.return_value = testvars.clu_state_four
+        client.indices.stats.return_value = testvars.stats_four
+        client.reindex.return_value = testvars.generic_task
+        client.tasks.get.side_effect = testvars.fake_fail
+        ilo = curator.IndexList(client)
+        # After building ilo, we need a different return value
+        client.indices.get_settings.return_value = {'other_index':{}}
+        ro = curator.Reindex(ilo, testvars.reindex_basic)
+        self.assertRaises(curator.CuratorException, ro.do_action)
     def test_reindex_without_wait(self):
         client = Mock()
         client.info.return_value = {'version': {'number': '5.0.0'} }
@@ -172,3 +198,16 @@ class TestActionReindex(TestCase):
         urllib3 = Mock()
         urllib3.util.retry.side_effect = testvars.fake_fail
         self.assertRaises(Exception, curator.Reindex, ilo, badval)
+    def test_init_raise_empty_source_list(self):
+        client = Mock()
+        client.info.return_value = {'version': {'number': '5.0.0'} }
+        client.indices.get_settings.return_value = testvars.settings_one
+        client.cluster.state.return_value = testvars.clu_state_one
+        client.indices.stats.return_value = testvars.stats_one
+        ilo = curator.IndexList(client)
+        badval = { 
+            'source': { 'index': [] }, 
+            'dest': { 'index': 'other_index' } 
+        }
+        ro = curator.Reindex(ilo, badval)
+        self.assertRaises(curator.NoIndices, ro.do_action)

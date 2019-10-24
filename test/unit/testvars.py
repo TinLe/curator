@@ -1,5 +1,4 @@
 import elasticsearch
-from voluptuous import *
 
 fake_fail      = Exception('Simulated Failure')
 four_oh_one    = elasticsearch.TransportError(401, "simulated error")
@@ -582,6 +581,18 @@ fieldstats_four = {
     }
 }
 
+fieldstats_query = {
+    u'aggregations': {
+        u'min' : {
+            u'value_as_string': u'2016-03-03T00:00:06.189Z',
+            u'value': 1456963206189,
+        },
+        u'max' : {
+            u'value': 1457049599152,
+            u'value_as_string': u'2016-03-03T23:59:59.152Z',
+        }
+    }
+}
 
 shards         = { 'indices': { named_index: { 'shards': {
         '0': [ { 'num_search_segments' : 15 }, { 'num_search_segments' : 21 } ],
@@ -808,6 +819,7 @@ is_rollable_hypenated = {u'index-2017.03.07-1': {u'aliases': {u'foo': {}}}}
 generic_task = {u'task': u'I0ekFjMhSPCQz7FUs1zJOg:54510686'}
 incomplete_task = {u'completed': False, u'task': {u'node': u'I0ekFjMhSPCQz7FUs1zJOg', u'status': {u'retries': {u'bulk': 0, u'search': 0}, u'updated': 0, u'batches': 3647, u'throttled_until_millis': 0, u'throttled_millis': 0, u'noops': 0, u'created': 3646581, u'deleted': 0, u'requests_per_second': -1.0, u'version_conflicts': 0, u'total': 3646581}, u'description': u'UNIT TEST', u'running_time_in_nanos': 1637039537721, u'cancellable': True, u'action': u'indices:data/write/reindex', u'type': u'transport', u'id': 54510686, u'start_time_in_millis': 1489695981997}, u'response': {u'retries': {u'bulk': 0, u'search': 0}, u'updated': 0, u'batches': 3647, u'throttled_until_millis': 0, u'throttled_millis': 0, u'noops': 0, u'created': 3646581, u'deleted': 0, u'took': 1636917, u'requests_per_second': -1.0, u'timed_out': False, u'failures': [], u'version_conflicts': 0, u'total': 3646581}}
 completed_task = {u'completed': True, u'task': {u'node': u'I0ekFjMhSPCQz7FUs1zJOg', u'status': {u'retries': {u'bulk': 0, u'search': 0}, u'updated': 0, u'batches': 3647, u'throttled_until_millis': 0, u'throttled_millis': 0, u'noops': 0, u'created': 3646581, u'deleted': 0, u'requests_per_second': -1.0, u'version_conflicts': 0, u'total': 3646581}, u'description': u'UNIT TEST', u'running_time_in_nanos': 1637039537721, u'cancellable': True, u'action': u'indices:data/write/reindex', u'type': u'transport', u'id': 54510686, u'start_time_in_millis': 1489695981997}, u'response': {u'retries': {u'bulk': 0, u'search': 0}, u'updated': 0, u'batches': 3647, u'throttled_until_millis': 0, u'throttled_millis': 0, u'noops': 0, u'created': 3646581, u'deleted': 0, u'took': 1636917, u'requests_per_second': -1.0, u'timed_out': False, u'failures': [], u'version_conflicts': 0, u'total': 3646581}}
+completed_task_zero_total = {u'completed': True, u'task': {u'node': u'I0ekFjMhSPCQz7FUs1zJOg', u'status': {u'retries': {u'bulk': 0, u'search': 0}, u'updated': 0, u'batches': 0, u'throttled_until_millis': 0, u'throttled_millis': 0, u'noops': 0, u'created': 0, u'deleted': 0, u'requests_per_second': -1.0, u'version_conflicts': 0, u'total': 0}, u'description': u'UNIT TEST', u'running_time_in_nanos': 1637039537721, u'cancellable': True, u'action': u'indices:data/write/reindex', u'type': u'transport', u'id': 54510686, u'start_time_in_millis': 1489695981997}, u'response': {u'retries': {u'bulk': 0, u'search': 0}, u'updated': 0, u'batches': 0, u'throttled_until_millis': 0, u'throttled_millis': 0, u'noops': 0, u'created': 0, u'deleted': 0, u'took': 1636917, u'requests_per_second': -1.0, u'timed_out': False, u'failures': [], u'version_conflicts': 0, u'total': 0}}
 recovery_output = {'index-2015.01.01': {'shards' : [{'stage':'DONE'}]}, 'index-2015.02.01': {'shards' : [{'stage':'DONE'}]}}
 unrecovered_output = {'index-2015.01.01': {'shards' : [{'stage':'INDEX'}]}, 'index-2015.02.01': {'shards' : [{'stage':'INDEX'}]}}
 cluster_health = { "cluster_name": "unit_test", "status": "green", "timed_out": False, "number_of_nodes": 7, "number_of_data_nodes": 3, "active_primary_shards": 235, "active_shards": 471, "relocating_shards": 0, "initializing_shards": 0, "unassigned_shards": 0, "delayed_unassigned_shards": 0, "number_of_pending_tasks": 0,  "task_max_waiting_in_queue_millis": 0, "active_shards_percent_as_number": 100}

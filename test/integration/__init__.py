@@ -1,14 +1,18 @@
-import time
+import logging
 import os
-import shutil
-import tempfile
 import random
+import shutil
 import string
+import sys
+import tempfile
+import time
 from datetime import timedelta, datetime, date
-
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import ConnectionError
+from subprocess import Popen, PIPE
+from curator import get_version
 
+from . import testvars as testvars
 from unittest import SkipTest, TestCase
 from mock import Mock
 
@@ -42,6 +46,7 @@ def get_client():
     for _ in range(100):
         time.sleep(.1)
         try:
+            # pylint: disable=E1123
             client.cluster.health(wait_for_status='yellow')
             return client
         except ConnectionError:
@@ -60,6 +65,7 @@ class Args(dict):
 class CuratorTestCase(TestCase):
     def setUp(self):
         super(CuratorTestCase, self).setUp()
+        self.logger = logging.getLogger('CuratorTestCase.setUp')
         self.client = get_client()
 
         args = {}
@@ -80,10 +86,14 @@ class CuratorTestCase(TestCase):
         self.args['repository'] = 'TEST_REPOSITORY'
         # if not os.path.exists(self.args['location']):
         #     os.makedirs(self.args['location'])
+        self.logger.debug('setUp completed...')
 
     def tearDown(self):
+        self.logger = logging.getLogger('CuratorTestCase.tearDown')
+        self.logger.debug('tearDown initiated...')
         self.delete_repositories()
         self.client.indices.delete(index='*')
+        # pylint: disable=E1123
         self.client.indices.delete_template(name='*', ignore=404)
         for path_arg in ['location', 'configdir']:
             if os.path.exists(self.args[path_arg]):
@@ -92,45 +102,54 @@ class CuratorTestCase(TestCase):
     def parse_args(self):
         return Args(self.args)
 
-    def create_indices(self, count, unit=None):
+    def create_indices(self, count, unit=None, ilm_policy=None):
         now = datetime.utcnow()
         unit = unit if unit else self.args['time_unit']
         format = DATEMAP[unit]
         if not unit == 'months':
             step = timedelta(**{unit: 1})
-            for x in range(count):
-                self.create_index(self.args['prefix'] + now.strftime(format), wait_for_yellow=False)
+            for _ in range(count):
+                self.create_index(self.args['prefix'] + now.strftime(format), wait_for_yellow=False, ilm_policy=ilm_policy)
                 now -= step
         else: # months
             now = date.today()
             d = date(now.year, now.month, 1)
-            self.create_index(self.args['prefix'] + now.strftime(format), wait_for_yellow=False)
+            self.create_index(self.args['prefix'] + now.strftime(format), wait_for_yellow=False, ilm_policy=ilm_policy)
 
-            for i in range(1, count):
+            for _ in range(1, count):
                 if d.month == 1:
                     d = date(d.year-1, 12, 1)
                 else:
                     d = date(d.year, d.month-1, 1)
-                self.create_index(self.args['prefix'] + datetime(d.year, d.month, 1).strftime(format), wait_for_yellow=False)
-
+                self.create_index(self.args['prefix'] + datetime(d.year, d.month, 1).strftime(format), wait_for_yellow=False, ilm_policy=ilm_policy)
+        # pylint: disable=E1123
         self.client.cluster.health(wait_for_status='yellow')
 
-    def create_index(self, name, shards=1, wait_for_yellow=True):
-        self.client.indices.create(
-            index=name,
-            body={'settings': {'number_of_shards': shards, 'number_of_replicas': 0}}
-        )
+    def wfy(self):
+        # pylint: disable=E1123
+        self.client.cluster.health(wait_for_status='yellow')
+
+    def create_index(self, name, shards=1, wait_for_yellow=True, ilm_policy=None, wait_for_active_shards=1):
+        request_body={'settings': {'number_of_shards': shards, 'number_of_replicas': 0}}
+        if ilm_policy is not None:
+            request_body['settings']['index'] = {'lifecycle': {'name': ilm_policy}}
+        self.client.indices.create(index=name, body=request_body, wait_for_active_shards=wait_for_active_shards)
         if wait_for_yellow:
-            self.client.cluster.health(wait_for_status='yellow')
+            self.wfy()
 
     def add_docs(self, idx):
         for i in ["1", "2", "3"]:
-            self.client.create(
-                index=idx, doc_type='log', id=i,
-                body={"doc" + i :'TEST DOCUMENT'},
-            )
+            ver = get_version(self.client)
+            if ver >= (7, 0, 0):
+                self.client.create(
+                    index=idx, doc_type='_doc', id=i, body={"doc" + i :'TEST DOCUMENT'})
+            else:
+                self.client.create(
+                    index=idx, doc_type='doc', id=i, body={"doc" + i :'TEST DOCUMENT'})
             # This should force each doc to be in its own segment.
+            # pylint: disable=E1123
             self.client.indices.flush(index=idx, force=True)
+            self.client.indices.refresh(index=idx)
 
     def create_snapshot(self, name, csv_indices):
         body = {
@@ -140,6 +159,7 @@ class CuratorTestCase(TestCase):
             "partial": False,
         }
         self.create_repository()
+        # pylint: disable=E1123
         self.client.snapshot.create(
             repository=self.args['repository'], snapshot=name, body=body,
             wait_for_completion=True
@@ -160,3 +180,16 @@ class CuratorTestCase(TestCase):
     def write_config(self, fname, data):
         with open(fname, 'w') as f:
             f.write(data)
+
+    def get_runner_args(self):
+        self.write_config(self.args['configfile'], testvars.client_config.format(host, port))
+        runner = os.path.join(os.getcwd(), 'run_singleton.py')
+        return [ sys.executable, runner ]
+    
+    def run_subprocess(self, args, logname='subprocess'):
+        logger = logging.getLogger(logname)
+        p = Popen(args, stderr=PIPE, stdout=PIPE)
+        stdout, stderr = p.communicate()
+        logger.debug('STDOUT = {0}'.format(stdout.decode('utf-8')))
+        logger.debug('STDERR = {0}'.format(stderr.decode('utf-8')))
+        return p.returncode

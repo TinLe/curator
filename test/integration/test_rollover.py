@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 host, port = os.environ.get('TEST_ES_SERVER', 'localhost:9200').split(':')
 port = int(port) if port else 9200
 
-class TestCLIRollover(CuratorTestCase):
+class TestActionFileRollover(CuratorTestCase):
     def test_max_age_true(self):
         oldindex  = 'rolltome-000001'
         newindex  = 'rolltome-000002'
@@ -34,7 +34,7 @@ class TestCLIRollover(CuratorTestCase):
         self.write_config(self.args['actionfile'],
             testvars.rollover_one.format(alias, condition, value))
         test = clicktest.CliRunner()
-        result = test.invoke(
+        _ = test.invoke(
                     curator.cli,
                     [
                         '--config', self.args['configfile'],
@@ -44,7 +44,6 @@ class TestCLIRollover(CuratorTestCase):
         self.assertEqual(expected, self.client.indices.get_alias(name=alias))
     def test_max_age_false(self):
         oldindex  = 'rolltome-000001'
-        newindex  = 'rolltome-000002'
         alias     = 'delamitri'
         condition = 'max_age'
         value     = '10s'
@@ -59,7 +58,7 @@ class TestCLIRollover(CuratorTestCase):
         self.write_config(self.args['actionfile'],
             testvars.rollover_one.format(alias, condition, value))
         test = clicktest.CliRunner()
-        result = test.invoke(
+        _ = test.invoke(
                     curator.cli,
                     [
                         '--config', self.args['configfile'],
@@ -84,7 +83,7 @@ class TestCLIRollover(CuratorTestCase):
         self.write_config(self.args['actionfile'],
             testvars.rollover_one.format(alias, condition, value))
         test = clicktest.CliRunner()
-        result = test.invoke(
+        _ = test.invoke(
                     curator.cli,
                     [
                         '--config', self.args['configfile'],
@@ -94,7 +93,6 @@ class TestCLIRollover(CuratorTestCase):
         self.assertEqual(expected, self.client.indices.get_alias(name=alias))
     def test_max_docs_false(self):
         oldindex  = 'rolltome-000001'
-        newindex  = 'rolltome-000002'
         alias     = 'delamitri'
         condition = 'max_docs'
         value     = '5'
@@ -109,32 +107,7 @@ class TestCLIRollover(CuratorTestCase):
         self.write_config(self.args['actionfile'],
             testvars.rollover_one.format(alias, condition, value))
         test = clicktest.CliRunner()
-        result = test.invoke(
-                    curator.cli,
-                    [
-                        '--config', self.args['configfile'],
-                        self.args['actionfile']
-                    ],
-                    )
-        self.assertEqual(expected, self.client.indices.get_alias(name=alias))
-    def test_max_docs_true(self):
-        oldindex  = 'rolltome-000001'
-        newindex  = 'rolltome-000002'
-        alias     = 'delamitri'
-        condition = 'max_docs'
-        value     = '2'
-        expected  = {newindex: {u'aliases': {alias: {}}}}
-        self.client.indices.create(
-            index=oldindex,
-            body={ 'aliases': { alias: {} } }
-        )
-        self.add_docs(oldindex)
-        self.write_config(
-            self.args['configfile'], testvars.client_config.format(host, port))
-        self.write_config(self.args['actionfile'],
-            testvars.rollover_one.format(alias, condition, value))
-        test = clicktest.CliRunner()
-        result = test.invoke(
+        _ = test.invoke(
                     curator.cli,
                     [
                         '--config', self.args['configfile'],
@@ -144,7 +117,6 @@ class TestCLIRollover(CuratorTestCase):
         self.assertEqual(expected, self.client.indices.get_alias(name=alias))
     def test_conditions_both_false(self):
         oldindex  = 'rolltome-000001'
-        newindex  = 'rolltome-000002'
         alias     = 'delamitri'
         max_age   = '10s'
         max_docs  = '5'
@@ -159,7 +131,7 @@ class TestCLIRollover(CuratorTestCase):
         self.write_config(self.args['actionfile'],
             testvars.rollover_both.format(alias, max_age, max_docs))
         test = clicktest.CliRunner()
-        result = test.invoke(
+        _ = test.invoke(
                     curator.cli,
                     [
                         '--config', self.args['configfile'],
@@ -185,7 +157,7 @@ class TestCLIRollover(CuratorTestCase):
         self.write_config(self.args['actionfile'],
             testvars.rollover_both.format(alias, max_age, max_docs))
         test = clicktest.CliRunner()
-        result = test.invoke(
+        _ = test.invoke(
                     curator.cli,
                     [
                         '--config', self.args['configfile'],
@@ -210,7 +182,7 @@ class TestCLIRollover(CuratorTestCase):
         self.write_config(self.args['actionfile'],
             testvars.rollover_both.format(alias, max_age, max_docs))
         test = clicktest.CliRunner()
-        result = test.invoke(
+        _ = test.invoke(
                     curator.cli,
                     [
                         '--config', self.args['configfile'],
@@ -220,7 +192,6 @@ class TestCLIRollover(CuratorTestCase):
         self.assertEqual(expected, self.client.indices.get_alias(name=alias))
     def test_conditions_one_empty_one_true(self):
         oldindex  = 'rolltome-000001'
-        newindex  = 'rolltome-000002'
         alias     = 'delamitri'
         max_age   = ' '
         max_docs  = '2'
@@ -235,7 +206,7 @@ class TestCLIRollover(CuratorTestCase):
         self.write_config(self.args['actionfile'],
             testvars.rollover_both.format(alias, max_age, max_docs))
         test = clicktest.CliRunner()
-        result = test.invoke(
+        _ = test.invoke(
                     curator.cli,
                     [
                         '--config', self.args['configfile'],
@@ -243,10 +214,9 @@ class TestCLIRollover(CuratorTestCase):
                     ],
                     )
         self.assertEqual(expected, self.client.indices.get_alias(name=alias))
-        self.assertEqual(-1, result.exit_code)
+        self.assertEqual(-1, _.exit_code)
     def test_bad_settings(self):
         oldindex  = 'rolltome-000001'
-        newindex  = 'rolltome-000002'
         alias     = 'delamitri'
         max_age   = '10s'
         max_docs  = '2'
@@ -261,7 +231,7 @@ class TestCLIRollover(CuratorTestCase):
         self.write_config(self.args['actionfile'],
             testvars.rollover_bad_settings.format(alias, max_age, max_docs))
         test = clicktest.CliRunner()
-        result = test.invoke(
+        _ = test.invoke(
                     curator.cli,
                     [
                         '--config', self.args['configfile'],
@@ -269,14 +239,14 @@ class TestCLIRollover(CuratorTestCase):
                     ],
                     )
         self.assertEqual(expected, self.client.indices.get_alias(name=alias))
-        self.assertEqual(1, result.exit_code)
+        self.assertEqual(1, _.exit_code)
     def test_extra_option(self):
         self.write_config(
             self.args['configfile'], testvars.client_config.format(host, port))
         self.write_config(self.args['actionfile'],
             testvars.bad_option_proto_test.format('rollover'))
         test = clicktest.CliRunner()
-        result = test.invoke(
+        _ = test.invoke(
                     curator.cli,
                     [
                         '--config', self.args['configfile'],
@@ -284,7 +254,7 @@ class TestCLIRollover(CuratorTestCase):
                     ],
                     )
         self.assertEqual([], curator.get_indices(self.client))
-        self.assertEqual(-1, result.exit_code)
+        self.assertEqual(-1, _.exit_code)
     def test_max_age_with_new_name(self):
         oldindex  = 'rolltome-000001'
         newindex  = 'crazy_test'
@@ -302,7 +272,7 @@ class TestCLIRollover(CuratorTestCase):
         self.write_config(self.args['actionfile'],
             testvars.rollover_with_name.format(alias, condition, value, newindex))
         test = clicktest.CliRunner()
-        result = test.invoke(
+        _ = test.invoke(
                     curator.cli,
                     [
                         '--config', self.args['configfile'],
@@ -327,7 +297,7 @@ class TestCLIRollover(CuratorTestCase):
         self.write_config(self.args['actionfile'],
             testvars.rollover_with_name.format(alias, condition, value, newindex))
         test = clicktest.CliRunner()
-        result = test.invoke(
+        _ = test.invoke(
                     curator.cli,
                     [
                         '--config', self.args['configfile'],
@@ -352,11 +322,90 @@ class TestCLIRollover(CuratorTestCase):
         self.write_config(self.args['actionfile'],
             testvars.rollover_with_name.format(alias, condition, value, newindex))
         test = clicktest.CliRunner()
-        result = test.invoke(
+        _ = test.invoke(
                     curator.cli,
                     [
                         '--config', self.args['configfile'],
                         self.args['actionfile']
                     ],
                     )
+        self.assertEqual(expected, self.client.indices.get_alias(name=alias))
+    def test_is_write_alias(self):
+        oldindex  = 'rolltome-000001'
+        newindex  = 'rolltome-000002'
+        alias     = 'delamitri'
+        condition = 'max_age'
+        value     = '1s'
+        ver = curator.get_version(self.client)
+        if ver >= (6, 5, 0):
+            request_body = { 'aliases': { alias: {'is_write_index': True} } }
+            expected  = 2
+        else:
+            request_body = { 'aliases': { alias: {} } }
+            expected = 1
+        self.client.indices.create(
+            index=oldindex,
+            body=request_body
+        )
+        time.sleep(1)
+        self.write_config(
+            self.args['configfile'], testvars.client_config.format(host, port))
+        self.write_config(self.args['actionfile'],
+            testvars.rollover_one.format(alias, condition, value))
+        test = clicktest.CliRunner()
+        _ = test.invoke(
+            curator.cli,
+            [ '--config', self.args['configfile'], self.args['actionfile'] ],
+        )
+        self.assertEqual(expected, len(self.client.indices.get_alias(name=alias)))
+    def test_no_rollover_ilm_associated(self):
+        oldindex  = 'rolltome-000001'
+        newindex  = 'rolltome-000002'
+        alias     = 'delamitri'
+        condition = 'max_age'
+        value     = '1s'
+        expected  = 1
+        version = curator.utils.get_version(self.client)
+        if version <= (6, 6, 0):
+            # No ILM before 6.6.x
+            self.assertEqual(expected, 1)
+        else:
+            self.client.indices.create(
+                index=oldindex, 
+                body={'settings': {'index': {'lifecycle': {'name': 'generic'}}}, 'aliases': { alias: {} } }
+            )
+            time.sleep(1)
+            self.write_config(
+                self.args['configfile'], testvars.client_config.format(host, port))
+            self.write_config(self.args['actionfile'],
+                testvars.rollover_one.format(alias, condition, value))
+            test = clicktest.CliRunner()
+            _ = test.invoke(
+                        curator.cli,
+                        [
+                            '--config', self.args['configfile'],
+                            self.args['actionfile']
+                        ],
+                        )
+            self.assertEqual(0, _.exit_code)
+            self.assertEqual(expected, len(self.client.indices.get_alias(name=alias)))
+            self.assertEqual(oldindex, list(self.client.indices.get_alias(name=alias).keys())[0])
+
+class TestCLIRollover(CuratorTestCase):
+    def test_max_age_true(self):
+        oldindex  = 'rolltome-000001'
+        newindex  = 'rolltome-000002'
+        alias     = 'delamitri'
+        value     = '1s'
+        expected  = {newindex: {u'aliases': {alias: {}}}}
+        self.client.indices.create(index=oldindex, body={'aliases':{alias:{}}})
+        time.sleep(1)
+        args = self.get_runner_args()
+        args += [
+            '--config', self.args['configfile'],
+            'rollover',
+            '--name', alias,
+            '--max_age', value
+        ]
+        self.assertEqual(0, self.run_subprocess(args, logname='TestCLIRollover.test_max_age_true'))
         self.assertEqual(expected, self.client.indices.get_alias(name=alias))

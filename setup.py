@@ -22,11 +22,16 @@ def get_version():
     return VERSION
 
 def get_install_requires():
-    res = ['elasticsearch>=5.4.0,<6.0.0' ]
-    res.append('click>=6.7')
-    res.append('pyyaml>=3.10')
+    res = ['elasticsearch>=7.0.4,<8.0.0' ]
+    res.append('urllib3>=1.24.2,<1.25')
+    res.append('requests>=2.20.0')
+    res.append('boto3>=1.9.142')
+    res.append('requests_aws4auth>=0.9')
+    res.append('click>=6.7,<7.0')
+    res.append('pyyaml==3.13')
     res.append('voluptuous>=0.9.3')
-    res.append('certifi>=2017.4.17')
+    res.append('certifi>=2019.9.11')
+    res.append('six>=1.11.0')
     return res
 
 try:
@@ -39,11 +44,7 @@ try:
         cert_file = ''
     # Dependencies are automatically detected, but it might need
     # fine tuning.
-    buildOptions = dict(
-        packages = [],
-        excludes = [],
-        include_files = [cert_file],
-    )
+
 
     base = 'Console'
 
@@ -66,6 +67,11 @@ try:
         base=base,
         targetName = "es_repo_mgr",
     )
+    buildOptions = dict(
+        packages = [],
+        excludes = [],
+        include_files = [cert_file],
+    )
 
     if sys.platform == "win32":
         curator_exe = Executable(
@@ -86,6 +92,15 @@ try:
             targetName = "es_repo_mgr.exe",
             icon = icon
         )
+
+        msvcrt = 'vcruntime140.dll'
+        buildOptions = dict(
+            packages = [],
+            excludes = [],
+            include_files = [cert_file, msvcrt],
+            include_msvcr = True, 
+        )
+
     setup(
         name = "elasticsearch-curator",
         version = get_version(),
@@ -97,6 +112,7 @@ try:
         download_url = "https://github.com/elastic/curator/tarball/v" + get_version(),
         license = "Apache License, Version 2.0",
         install_requires = get_install_requires(),
+        setup_requires = get_install_requires(),
         keywords = "elasticsearch time-series indexed index-expiry",
         packages = ["curator"],
         include_package_data=True,
@@ -114,9 +130,9 @@ try:
             "Operating System :: OS Independent",
             "Programming Language :: Python",
             "Programming Language :: Python :: 2.7",
-            "Programming Language :: Python :: 3.4",
             "Programming Language :: Python :: 3.5",
             "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
         ],
         test_suite = "test.run_tests.run_all",
         tests_require = ["mock", "nose", "coverage", "nosexcover"],
@@ -153,9 +169,9 @@ except ImportError:
             "Operating System :: OS Independent",
             "Programming Language :: Python",
             "Programming Language :: Python :: 2.7",
-            "Programming Language :: Python :: 3.4",
             "Programming Language :: Python :: 3.5",
             "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
         ],
         test_suite = "test.run_tests.run_all",
         tests_require = ["mock", "nose", "coverage", "nosexcover"]
